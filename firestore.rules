@@ -1,0 +1,26 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Paste Nina's Firebase Auth UID (Console > Authentication > Users). No secret lives in the website code.
+    function isAdmin() { return request.auth != null && request.auth.uid == 'IBokx4I7VZd6epe7bQ30RnNKUpl1'; }
+
+    match /artworks/{id} { allow read: if true; allow write: if isAdmin(); }
+
+    match /likes/{id} {
+      allow read: if true;
+      allow create: if request.resource.data.keys().hasOnly(['count']) && request.resource.data.count == 1;
+      allow update: if request.resource.data.keys().hasOnly(['count']) && request.resource.data.count is int
+        && request.resource.data.count >= 0 && math.abs(request.resource.data.count - resource.data.count) == 1;
+      allow delete: if isAdmin();
+    }
+
+    match /comments/{id} {
+      allow read: if true;
+      allow create: if request.resource.data.keys().hasOnly(['artwork_id', 'author_name', 'comment_text', 'timestamp'])
+        && request.resource.data.author_name is string && request.resource.data.author_name.size() <= 40
+        && request.resource.data.comment_text is string && request.resource.data.comment_text.size() > 0 && request.resource.data.comment_text.size() <= 500
+        && request.resource.data.timestamp == request.time;
+      allow delete: if isAdmin();
+    }
+  }
+}
